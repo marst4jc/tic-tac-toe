@@ -1,132 +1,150 @@
+import gradio as gr  # Import Gradio to build a friendly web interface for the game.
 from random import randrange  # Import the randrange function to pick random numbers for the computer's move.
 
 
-def display_board(board):
-    """Print a human-readable version of the current board."""
-    horizontal_border = "+-------+-------+-------+"  # A reusable border string that outlines each row.
-    empty_row = "|       |       |       |"  # A spacer line to pad the cells for readability.
-
-    for row in board:  # Iterate through each of the three board rows.
-        print(horizontal_border)  # Draw the top border for the current row.
-        print(empty_row)  # Add a blank padded line above the cell content.
-        print("|   " + "   |   ".join(str(cell) for cell in row) + "   |")  # Show the row's values separated by vertical lines.
-        print(empty_row)  # Add a blank padded line below the cell content.
-    print(horizontal_border)  # Close the board with a final border line.
-
-
 def make_list_of_free_fields(board):
-    """Return a list of coordinates for all squares that are not yet taken."""
-    free_fields = []  # Start with an empty list to collect available positions.
-    for row_idx, row in enumerate(board):  # Loop over each row along with its index.
-        for col_idx, cell in enumerate(row):  # Loop over each cell in the current row with its column index.
-            if cell not in ("X", "O"):  # Check whether the square is still a number (meaning it's empty).
-                free_fields.append((row_idx, col_idx))  # Record the row and column of this empty square.
-    return free_fields  # Hand back every free coordinate so other functions can use them.
+    """Return a list of indices for open squares in a 1D board representation."""
+
+    return [index for index, cell in enumerate(board) if cell not in ("X", "O")]
 
 
 def victory_for(board, sign):
-    """Check whether the provided sign ('X' or 'O') has a winning line."""
-    win_positions = [  # Predefine every combination of coordinates that forms a win.
+    """Check whether the provided sign ("X" or "O") has a winning line."""
+
+    win_positions = [
         # Rows
-        [(0, 0), (0, 1), (0, 2)],  # Top row
-        [(1, 0), (1, 1), (1, 2)],  # Middle row
-        [(2, 0), (2, 1), (2, 2)],  # Bottom row
+        (0, 1, 2),
+        (3, 4, 5),
+        (6, 7, 8),
         # Columns
-        [(0, 0), (1, 0), (2, 0)],  # Left column
-        [(0, 1), (1, 1), (2, 1)],  # Middle column
-        [(0, 2), (1, 2), (2, 2)],  # Right column
+        (0, 3, 6),
+        (1, 4, 7),
+        (2, 5, 8),
         # Diagonals
-        [(0, 0), (1, 1), (2, 2)],  # Top-left to bottom-right diagonal
-        [(0, 2), (1, 1), (2, 0)],  # Top-right to bottom-left diagonal
+        (0, 4, 8),
+        (2, 4, 6),
     ]
 
-    for positions in win_positions:  # Walk through each possible winning combination.
-        if all(board[row][col] == sign for row, col in positions):  # Confirm every square in this combo matches the sign.
-            return True  # Immediately report a win when a full line is found.
-    return False  # If no combos match, the player has not won yet.
+    return any(all(board[pos] == sign for pos in pattern) for pattern in win_positions)
 
 
-def enter_move(board):
-    """Ask the human player for a move and place their 'O' on the board."""
-    while True:  # Repeat until the player provides a valid input.
-        move_input = input("Enter your move: ")  # Read raw input from the keyboard.
-        try:
-            move = int(move_input)  # Attempt to convert the text to an integer representing the chosen square.
-        except ValueError:  # If conversion fails, the user didn't type a proper number.
-            print("Please enter a valid number between 1 and 9.")  # Guide the user to provide correct input.
-            continue  # Restart the loop to ask again.
+def computer_move(board):
+    """Place an 'X' on a random free square."""
 
-        if move < 1 or move > 9:  # Ensure the chosen number maps to a board position.
-            print("The move must be between 1 and 9.")  # Explain the allowed range.
-            continue  # Restart the loop for another try.
+    free_fields = make_list_of_free_fields(board)
+    if not free_fields:
+        return board
 
-        row = (move - 1) // 3  # Convert the 1-9 choice to a zero-based row index.
-        col = (move - 1) % 3  # Convert the same choice to a zero-based column index.
-
-        if board[row][col] in ("X", "O"):  # Check whether that square is already taken.
-            print("That square is already occupied. Choose another one.")  # Alert the user and prompt again.
-            continue  # Loop back for a new selection.
-
-        board[row][col] = "O"  # Place the human player's marker on the chosen square.
-        break  # Exit the loop because the move was successful.
+    board[free_fields[randrange(len(free_fields))]] = "X"
+    return board
 
 
-def draw_move(board):
-    """Let the computer choose a random free square and place an 'X'."""
-    free_fields = make_list_of_free_fields(board)  # Collect all currently open squares.
-    if not free_fields:  # If nothing is available, there is no move to make.
-        return  # Exit without modifying the board.
+def format_board(board):
+    """Convert board state to display-friendly labels."""
 
-    row, col = free_fields[randrange(len(free_fields))]  # Pick a random available square by index.
-    board[row][col] = "X"  # Place the computer's marker on that square.
+    return [cell if cell in ("X", "O") else "" for cell in board]
+
+
+def describe_state(board):
+    """Create a user-facing message summarizing the current game state."""
+
+    if victory_for(board, "O"):
+        return "You won! 🎉"
+    if victory_for(board, "X"):
+        return "The computer won this round."
+    if not make_list_of_free_fields(board):
+        return "It's a tie!"
+    return "Your move: tap any open square to place an O."
+
+
+def initialize_board():
+    """Start a new game with the computer taking center as X."""
+
+    board = ["" for _ in range(9)]
+    board[4] = "X"
+    return board
+
+
+def reset_game():
+    """Return a fresh board and its accompanying status and labels."""
+
+    board = initialize_board()
+    return board, describe_state(board), *format_board(board)
+
+
+def play_turn(selected_index, board):
+    """Process a player's move, then let the computer respond if the game continues."""
+
+    # Copy to avoid mutating Gradio's state in place before returning updates.
+    board = list(board)
+
+    # If the game is already over, keep the board unchanged.
+    if victory_for(board, "O") or victory_for(board, "X") or not make_list_of_free_fields(board):
+        return board, describe_state(board), *format_board(board)
+
+    if board[selected_index] in ("X", "O"):
+        return board, "That square is taken. Choose another spot!", *format_board(board)
+
+    board[selected_index] = "O"
+
+    if victory_for(board, "O") or not make_list_of_free_fields(board):
+        return board, describe_state(board), *format_board(board)
+
+    # Computer's response
+    computer_move(board)
+    return board, describe_state(board), *format_board(board)
+
+
+def build_ui():
+    """Create and return a Gradio Blocks interface for the game."""
+
+    with gr.Blocks(title="Tic-Tac-Toe") as demo:
+        gr.Markdown(
+            """
+            # Tic-Tac-Toe
+            Play a quick round of Tic-Tac-Toe. You are **O** and the computer is **X**.
+            The computer starts in the center—tap any empty square to respond.
+            """
+        )
+
+        starting_board = initialize_board()
+        board_state = gr.State(starting_board)
+        status = gr.Markdown(describe_state(starting_board))
+
+        buttons = []
+        for row in range(3):
+            with gr.Row():
+                for col in range(3):
+                    index = row * 3 + col
+                    button = gr.Button(
+                        value="X" if index == 4 else "",
+                        size="lg",
+                        variant="secondary",
+                    )
+                    buttons.append(button)
+
+        for idx, button in enumerate(buttons):
+            button.click(
+                fn=lambda board, idx=idx: play_turn(idx, board),
+                inputs=board_state,
+                outputs=[board_state, status, *buttons],
+            )
+
+        gr.Button("Restart", variant="primary").click(
+            fn=reset_game,
+            inputs=None,
+            outputs=[board_state, status, *buttons],
+        )
+
+    return demo
 
 
 def main():
-    """Run the main game loop that alternates between the player and the computer."""
-    board = [  # Build the starting board layout with numbers for empty squares and an 'X' in the center.
-        [1, 2, 3],
-        [4, "X", 6],
-        [7, 8, 9],
-    ]
+    """Launch the Gradio demo for playing Tic-Tac-Toe."""
 
-    while True:  # Continue playing until a win or tie ends the game.
-        display_board(board)  # Show the current board to the player before each action.
-
-        if victory_for(board, "X"):  # Check if the computer has already won.
-            print("The computer won!")  # Announce the result to the player.
-            break  # End the game loop.
-        if victory_for(board, "O"):  # Check if the player has already won.
-            print("You won!")  # Celebrate the player's victory.
-            break  # End the game loop.
-
-        if not make_list_of_free_fields(board):  # If there are no open squares, the game must be a tie.
-            print("It's a tie!")  # Inform the player of the draw.
-            break  # Exit the loop because the game is finished.
-
-        enter_move(board)  # Ask the player for their move and update the board.
-
-        if victory_for(board, "O"):  # After the player's move, check again for a win.
-            display_board(board)  # Show the final board state.
-            print("You won!")  # Confirm the player's victory.
-            break  # Stop the game loop.
-
-        if not make_list_of_free_fields(board):  # If the board filled up after the player's move, it's a tie.
-            display_board(board)  # Display the filled board.
-            print("It's a tie!")  # Report the tie.
-            break  # End the game loop.
-
-        draw_move(board)  # Let the computer make its move.
-
-        if victory_for(board, "X"):  # Check if the computer's move created a winning line.
-            display_board(board)  # Show the board with the winning move.
-            print("The computer won!")  # Inform the player of the loss.
-            break  # End the game loop.
-
-        if not make_list_of_free_fields(board):  # If the board filled after the computer's move, it's a tie.
-            display_board(board)  # Display the final board.
-            print("It's a tie!")  # Announce the draw.
-            break  # Stop the loop because the game is over.
+    demo = build_ui()
+    demo.launch(server_name="0.0.0.0", server_port=7860)
 
 
-if __name__ == "__main__":  # Ensure this block runs only when the script is executed directly.
-    main()  # Start the game by calling the main function.
+if __name__ == "__main__":
+    main()
