@@ -1,1 +1,1 @@
-gradio>=4.44
+# No external Python dependencies are required for the React UI server.

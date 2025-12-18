@@ -1,12 +1,12 @@
 # tic-tac-toe
 
-Interactive Tic-Tac-Toe powered by a Gradio interface. You play **O** while the computer plays **X** and starts in the center.
+A sleek Tic-Tac-Toe experience with a React-powered interface. You play **O** while
+the computer opens with **X** in the center.
 
 ## Setup
 
-```bash
-pip install -r requirements.txt
-```
+This project now runs without external Python dependencies. A recent version of
+Python (3.9+) is all you need.
 
 ## Run the app
 
@@ -14,4 +14,13 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The app will print a local URL where you can play the game in your browser.
+The app will start a local static server (default: `http://localhost:8000`) that
+serves the React UI. Open the printed URL in your browser to play.
+
+## Customizing the port
+
+Set the `PORT` environment variable before launching if you want a different port:
+
+```bash
+PORT=3000 python main.py
+```
