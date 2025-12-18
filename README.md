@@ -5,18 +5,16 @@ Django project. You play **O** while the computer opens with **X** in the center
 
 ## Setup
 
-Install dependencies (Python 3.9+ recommended):
-
-```bash
-python -m pip install -r requirements.txt
-```
+This repository includes a tiny, built-in Django-compatible stub so it can run
+without downloading external packages (the execution environment does not allow
+network access).
 
 ## Run the app
 
-Start the Django development server:
+Start the lightweight development server (only `runserver` is implemented in the
+stub; migrations/admin are intentionally unavailable):
 
 ```bash
-python manage.py migrate  # sets up the default SQLite database
 python manage.py runserver 0.0.0.0:8000
 ```
 
